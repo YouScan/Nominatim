@@ -428,9 +428,15 @@ function javascript_renderData($xVal, $iOptions = 0)
 
 function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCode = false, $housenumber = -1, $bRaw = false)
 {
-    $sSQL = "select *,get_name_by_language(name,$sLanguagePrefArraySQL) as localname from get_addressdata($iPlaceID, $housenumber)";
-    if (!$bRaw) $sSQL .= " WHERE isaddress OR type = 'country_code'";
-    $sSQL .= ' order by rank_address desc,isaddress desc';
+    $sSQL = "SELECT CASE WHEN u.osm_type = 'N' THEN u.osm_id ELSE n.osm_id END AS node_osm_id, u.*,";
+    $sSQL .= '  get_name_by_language(u.name,'.$sLanguagePrefArraySQL.') as localname';
+    $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) u';
+    $sSQL .= ' LEFT JOIN placex n ON n.linked_place_id = u.place_id ';
+    $sSQL .= " WHERE (u.osm_type = 'N' OR n.osm_id IS NOT NULL OR u.type = 'country_code') ";
+    if (!$Raw) {
+        $sSQL .= " AND u.isaddress OR u.type = 'country_code'";
+    }
+    $sSQL .= ' ORDER BY rank_address desc,isaddress DESC';
 
     $aAddressLines = chksql($oDB->getAll($sSQL));
     if ($bRaw) return $aAddressLines;
@@ -458,6 +464,9 @@ function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCo
             $sTypeLabel = str_replace(' ', '_', $sTypeLabel);
             if (!isset($aAddress[$sTypeLabel]) || (isset($aFallback[$sTypeLabel]) && $aFallback[$sTypeLabel]) || $aLine['class'] == 'place') {
                 $aAddress[$sTypeLabel] = $aLine['localname']?$aLine['localname']:$aLine['housenumber'];
+                if ($sTypeLabel != 'country_code') {
+                    $aAddress[$sTypeLabel . '_osm_id'] = $aLine['node_osm_id'];
+                }
             }
             $aFallback[$sTypeLabel] = $bFallback;
         }

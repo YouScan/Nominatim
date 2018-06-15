@@ -179,7 +179,8 @@ class PlaceLookup
         $sPlaceIDs = Result::joinIdsByTable($aResults, Result::TABLE_PLACEX);
         if ($sPlaceIDs) {
             Debug::printVar('Ids from placex', $sPlaceIDs);
-            $sSQL  = 'SELECT ';
+            $sSQL  = 'WITH places AS (';
+            $sSQL .= 'SELECT ';
             $sSQL .= '    osm_type,';
             $sSQL .= '    osm_id,';
             $sSQL .= '    class,';
@@ -240,11 +241,45 @@ class PlaceLookup
             $sSQL .= '     ref, ';
             if ($this->bExtraTags) $sSQL .= 'extratags, ';
             if ($this->bNameDetails) $sSQL .= 'name, ';
-            $sSQL .= "     extratags->'place' ";
+            $sSQL .= "     extratags->'place' ) ";
+            
+            $sSQL .= ' SELECT ';
+            $sSQL .= " 'N' AS osm_type, ";
+            $sSQL .= " CASE WHEN p.osm_type = 'N' THEN p.osm_id ELSE c.osm_id END as osm_id, ";
+            $sSQL .= ' p.class, ';
+            $sSQL .= " CASE WHEN p.osm_type = 'N' THEN p.type ELSE c.type END AS type, ";
+            $sSQL .= '    admin_level,';
+            $sSQL .= '    rank_search,';
+            $sSQL .= '    rank_address,';
+            $sSQL .= " CASE WHEN p.osm_type = 'N' THEN p.place_id ELSE c.place_id END AS place_id, ";
+            $sSQL .= " CASE WHEN p.osm_type = 'N' THEN p.parent_place_id ELSE c.parent_place_id END AS parent_place_id, ";
+            $sSQL .= '    p.country_code, ';
+            $sSQL .= '    p.langaddress, ';
+            $sSQL .= '    p.placename, ';
+            $sSQL .= '    p.ref, ';
+            $sSQL .= '    country_code,';
+            if ($this->bExtraTags) {
+                $sSQL .= ' p.extra, ';
+            }
+            if ($this->bNameDetails) {
+                $sSQL .= ' p.names, ';
+            }
+            $sSQL .= ' p.lon, ';
+            $sSQL .= ' p.lat, ';
+            $sSQL .= ' p.importance, ';
+            $sSQL .= ' p.addressimportance, ';
+            $sSQL .= ' p.extra_place ';
+            $sSQL .= " FROM places p ";
+            $sSQL .= " LEFT JOIN LATERAL ( ";
+            $sSQL .= " SELECT osm_id, place_id, parent_place_id, type FROM placex ";
+            $sSQL .= " WHERE linked_place_id = p.place_id AND placex.osm_type = 'N' ORDER BY osm_id DESC LIMIT 1 ";
+            $sSQL .= " ) c ON true ";
+            $sSQL .= " WHERE p.osm_type = 'N' OR c.osm_id IS NOT NULL ";
 
             $aSubSelects[] = $sSQL;
         }
 
+        /*
         // postcode table
         $sPlaceIDs = Result::joinIdsByTable($aResults, Result::TABLE_POSTCODE);
         if ($sPlaceIDs) {
@@ -410,6 +445,7 @@ class PlaceLookup
                 }
             }
         }
+        */
 
         if (empty($aSubSelects)) {
             return array();
@@ -466,11 +502,13 @@ class PlaceLookup
 
     public function getAddressDetails($iPlaceID, $bAll = false, $sHousenumber = -1)
     {
-        $sSQL = 'SELECT *,';
-        $sSQL .= '  get_name_by_language(name,'.$this->aLangPrefOrderSql.') as localname';
-        $sSQL .= ' FROM get_addressdata('.$iPlaceID.','.$sHousenumber.')';
+        $sSQL = "SELECT CASE WHEN u.osm_type = 'N' THEN u.osm_id ELSE n.osm_id END AS node_osm_id, u.*,";
+        $sSQL .= '  get_name_by_language(u.name,'.$this->aLangPrefOrderSql.') as localname';
+        $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) u';
+        $sSQL .= ' LEFT JOIN placex n ON n.linked_place_id = u.place_id ';
+        $sSQL .= " WHERE (u.osm_type = 'N' OR n.osm_id IS NOT NULL OR u.type = 'country_code') ";
         if (!$bAll) {
-            $sSQL .= " WHERE isaddress OR type = 'country_code'";
+            $sSQL .= " AND u.isaddress OR u.type = 'country_code'";
         }
         $sSQL .= ' ORDER BY rank_address desc,isaddress DESC';
 
@@ -507,6 +545,9 @@ class PlaceLookup
                 $sTypeLabel = str_replace(' ', '_', $sTypeLabel);
                 if (!isset($aAddress[$sTypeLabel]) || (isset($aFallback[$sTypeLabel]) && $aFallback[$sTypeLabel]) || $aLine['class'] == 'place') {
                     $aAddress[$sTypeLabel] = $aLine['localname']?$aLine['localname']:$aLine['housenumber'];
+                    if ($sTypeLabel != 'country_code') {
+                        $aAddress[$sTypeLabel . '_osm_id'] = $aLine['node_osm_id'];
+                    }
                 }
                 $aFallback[$sTypeLabel] = $bFallback;
             }

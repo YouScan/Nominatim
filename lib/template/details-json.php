@@ -64,7 +64,7 @@ $funcMapKeyword = function ($aFull) {
 };
 
 if ($aAddressLines) {
-    $aPlaceDetails['address'] = array_map($funcMapAddressLine, $aAddressLines);
+    $aPlaceDetails['address'] = $aAddressLines; #array_map($funcMapAddressLine, $aAddressLines);
 }
 
 if ($aLinkedLines) {

@@ -21,7 +21,7 @@ $sClass = $oParams->getString('class');
 
 $bIncludeKeywords = $oParams->getBool('keywords', false);
 $bIncludeAddressDetails = $oParams->getBool('addressdetails', $sOutputFormat == 'html');
-$bIncludeLinkedPlaces = $oParams->getBool('linkedplaces', true);
+$bIncludeLinkedPlaces = $oParams->getBool('linkedplaces', $sOutputFormat == 'html');
 $bIncludeHierarchy = $oParams->getBool('hierarchy', $sOutputFormat == 'html');
 $bGroupHierarchy = $oParams->getBool('group_hierarchy', false);
 $bIncludePolygonAsGeoJSON = $oParams->getBool('polygon_geojson', $sOutputFormat == 'html');
@@ -172,13 +172,14 @@ if (PEAR::isError($aPointDetails['aExtraTags'])) { // possible timeout
 // Address
 $aAddressLines = false;
 if ($bIncludeAddressDetails) {
+    $sShowRaw = $sOutputFormat == 'html';
     $aAddressLines = getAddressDetails(
         $oDB,
         $sLanguagePrefArraySQL,
         $iPlaceID,
         $aPointDetails['country_code'],
         -1,
-        true
+        $sShowRaw
     );
 }
 
