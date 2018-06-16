@@ -507,6 +507,9 @@ class PlaceLookup
                 $sTypeLabel = str_replace(' ', '_', $sTypeLabel);
                 if (!isset($aAddress[$sTypeLabel]) || (isset($aFallback[$sTypeLabel]) && $aFallback[$sTypeLabel]) || $aLine['class'] == 'place') {
                     $aAddress[$sTypeLabel] = $aLine['localname']?$aLine['localname']:$aLine['housenumber'];
+                    if ($sTypeLabel != 'country_code') {
+                        $aAddress[$sTypeLabel . '_osm_id'] = $aLine['node_osm_id'];
+                    }    
                 }
                 $aFallback[$sTypeLabel] = $bFallback;
             }
