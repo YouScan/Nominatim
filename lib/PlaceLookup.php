@@ -473,7 +473,7 @@ class PlaceLookup
 
     public function getAddressDetails($iPlaceID, $bAll = false, $sHousenumber = -1)
     {
-        $sSQL = "SELECT p.extratags -> 'place' AS possible_place, ad.osm_type || p.osm_id AS node_osm_id, ad.*, ";
+        $sSQL = "SELECT p.extratags -> 'place' AS possible_type, ad.osm_type || p.osm_id AS node_osm_id, ad.*, ";
         $sSQL .= '  get_name_by_language(ad.name,'.$this->aLangPrefOrderSql.') as localname';
         $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) ad';
         $sSQL .= ' JOIN placex p ON ad.place_id = p.place_id ';
@@ -500,8 +500,8 @@ class PlaceLookup
         foreach ($aAddressLines as $aLine) {
             $bFallback = false;
             $aTypeLabel = false;
-            if (isset($aClassType['place'.':'.$aLine['possible_place']])) {
-                $aTypeLabel = $aClassType['place'.':'.$aLine['possible_place']];
+            if (isset($aClassType['place'.':'.$aLine['possible_type']])) {
+                $aTypeLabel = $aClassType['place'.':'.$aLine['possible_type']];
             } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
                 $aTypeLabel = $aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']];
             } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type']])) {
