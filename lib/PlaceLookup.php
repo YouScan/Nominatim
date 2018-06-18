@@ -179,7 +179,8 @@ class PlaceLookup
         $sPlaceIDs = Result::joinIdsByTable($aResults, Result::TABLE_PLACEX);
         if ($sPlaceIDs) {
             Debug::printVar('Ids from placex', $sPlaceIDs);
-            $sSQL  = 'SELECT ';
+            $sSQL =  'WITH places AS (';
+            $sSQL .= 'SELECT ';
             $sSQL .= '    osm_type,';
             $sSQL .= '    osm_id,';
             $sSQL .= '    class,';
@@ -240,12 +241,16 @@ class PlaceLookup
             $sSQL .= '     ref, ';
             if ($this->bExtraTags) $sSQL .= 'extratags, ';
             if ($this->bNameDetails) $sSQL .= 'name, ';
-            $sSQL .= "     extratags->'place' ";
-
+            $sSQL .= "     extratags->'place' ) ";
+            $sSQL .= " SELECT p.*, ";
+            $sSQL .= " CASE WHEN extra_place IS NOT NULL THEN 'place' ELSE class END AS possible_class, ";
+            $sSQL .= " CASE WHEN extra_place IS NOT NULL THEN extra_place ELSE type END AS possible_type ";
+            $sSQL .= " FROM places p";
             $aSubSelects[] = $sSQL;
         }
 
         // postcode table
+        /*
         $sPlaceIDs = Result::joinIdsByTable($aResults, Result::TABLE_POSTCODE);
         if ($sPlaceIDs) {
             Debug::printVar('Ids from location_postcode', $sPlaceIDs);
@@ -411,6 +416,8 @@ class PlaceLookup
             }
         }
 
+        */
+
         if (empty($aSubSelects)) {
             return array();
         }
@@ -466,14 +473,16 @@ class PlaceLookup
 
     public function getAddressDetails($iPlaceID, $bAll = false, $sHousenumber = -1)
     {
-        $sSQL = 'SELECT *,';
-        $sSQL .= '  get_name_by_language(name,'.$this->aLangPrefOrderSql.') as localname';
-        $sSQL .= ' FROM get_addressdata('.$iPlaceID.','.$sHousenumber.')';
+        $sSQL = "SELECT p.extratags -> 'place' AS possible_place, ad.osm_type || p.osm_id AS node_osm_id, ad.*, ";
+        $sSQL .= '  get_name_by_language(ad.name,'.$this->aLangPrefOrderSql.') as localname';
+        $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) ad';
+        $sSQL .= ' JOIN placex p ON ad.place_id = p.place_id ';
         if (!$bAll) {
-            $sSQL .= " WHERE isaddress OR type = 'country_code'";
+            $sSQL .= " WHERE ad.isaddress OR ad.type = 'country_code'";
         }
-        $sSQL .= ' ORDER BY rank_address desc,isaddress DESC';
+        $sSQL .= ' ORDER BY ad.rank_address desc,ad.isaddress DESC';
 
+        Debug::printSQL($sSQL);
         return chksql($this->oDB->getAll($sSQL));
     }
 
@@ -491,7 +500,9 @@ class PlaceLookup
         foreach ($aAddressLines as $aLine) {
             $bFallback = false;
             $aTypeLabel = false;
-            if (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
+            if (isset($aClassType['place'.':'.$aLine['possible_place']])) {
+                $aTypeLabel = $aClassType['place'.':'.$aLine['possible_place']];
+            } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
                 $aTypeLabel = $aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']];
             } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type']])) {
                 $aTypeLabel = $aClassType[$aLine['class'].':'.$aLine['type']];

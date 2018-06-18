@@ -29,6 +29,11 @@ foreach ($aSearchResults as $iResNum => $aPointDetails) {
     $aPlace['lon'] = $aPointDetails['lon'];
     $aPlace['display_name'] = $aPointDetails['name'];
 
+    // Return set of fields to boost OSM relation over OSM node
+    $aPlace['parent_place_id'] = $aPointDetails['parent_place_id'];
+    $aPlace['possible_class'] = $aPointDetails['possible_class'];
+    $aPlace['possible_type'] = $aPointDetails['possible_type'];
+
     if ($sOutputFormat == 'jsonv2') {
         $aPlace['place_rank'] = $aPointDetails['rank_search'];
         $aPlace['category'] = $aPointDetails['class'];

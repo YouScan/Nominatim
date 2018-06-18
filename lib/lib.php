@@ -428,9 +428,14 @@ function javascript_renderData($xVal, $iOptions = 0)
 
 function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCode = false, $housenumber = -1, $bRaw = false)
 {
-    $sSQL = "select *,get_name_by_language(name,$sLanguagePrefArraySQL) as localname from get_addressdata($iPlaceID, $housenumber)";
-    if (!$bRaw) $sSQL .= " WHERE isaddress OR type = 'country_code'";
-    $sSQL .= ' order by rank_address desc,isaddress desc';
+    $sSQL = "SELECT p.extratags -> 'place' AS possible_type, ad.osm_type || p.osm_id AS node_osm_id, ad.*,";
+    $sSQL .= '  get_name_by_language(ad.name,'.$sLanguagePrefArraySQL.') as localname';
+    $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) ad';
+    $sSQL .= ' JOIN placex p ON ad.place_id = p.place_id ';
+    if (!$bRaw) {
+        $sSQL .= " WHERE ad.isaddress OR ad.type = 'country_code'";
+    }
+    $sSQL .= ' ORDER BY ad.rank_address desc,ad.isaddress DESC';
 
     $aAddressLines = chksql($oDB->getAll($sSQL));
     if ($bRaw) return $aAddressLines;
@@ -442,7 +447,9 @@ function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCo
     foreach ($aAddressLines as $aLine) {
         $bFallback = false;
         $aTypeLabel = false;
-        if (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
+        if (isset($aClassType['place'.':'.$aLine['possible_type']])) {
+            $aTypeLabel = $aClassType['place'.':'.$aLine['possible_type']];
+        } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
             $aTypeLabel = $aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']];
         } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type']])) {
             $aTypeLabel = $aClassType[$aLine['class'].':'.$aLine['type']];
