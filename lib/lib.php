@@ -431,7 +431,7 @@ function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCo
     $sSQL = "SELECT p.extratags -> 'place' AS possible_type, ad.osm_type || p.osm_id AS node_osm_id, ad.*,";
     $sSQL .= '  get_name_by_language(ad.name,'.$sLanguagePrefArraySQL.') as localname';
     $sSQL .= ' FROM get_addressdata('.$iPlaceID.', -1) ad';
-    $sSQL .= ' JOIN placex p ON ad.place_id = p.place_id ';
+    $sSQL .= ' LEFT JOIN placex p ON ad.place_id = p.place_id ';
     if (!$bRaw) {
         $sSQL .= " WHERE ad.isaddress OR ad.type = 'country_code'";
     }
