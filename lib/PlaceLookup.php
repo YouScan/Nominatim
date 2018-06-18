@@ -500,6 +500,11 @@ class PlaceLookup
         foreach ($aAddressLines as $aLine) {
             $bFallback = false;
             $aTypeLabel = false;
+            $aPossibleLabel = false;
+            if (isset($aClassType['place'.':'.$aLine['possible_type']])) {
+                $aPossibleLabel = $aClassType['place'.':'.$aLine['possible_type']];
+            }
+
             if (isset($aClassType['place'.':'.$aLine['possible_type']])) {
                 $aTypeLabel = $aClassType['place'.':'.$aLine['possible_type']];
             } elseif (isset($aClassType[$aLine['class'].':'.$aLine['type'].':'.$aLine['admin_level']])) {
@@ -520,7 +525,12 @@ class PlaceLookup
                     $aAddress[$sTypeLabel] = $aLine['localname']?$aLine['localname']:$aLine['housenumber'];
                     if ($sTypeLabel != 'country_code') {
                         $aAddress[$sTypeLabel . '_osm_id'] = $aLine['node_osm_id'];
-                    }    
+                        if($aPossibleLabel) {
+                            $sPossibleLabel = strtolower(isset($aPossibleLabel['simplelabel'])?$aPossibleLabel['simplelabel']:$aPossibleLabel['label']);
+                            $sPossibleLabel = str_replace(' ', '_', $sPossibleLabel);
+                            $aAddress['possible_'.$sPossibleLabel.'_osm_id'] = $aLine['node_osm_id'];
+                        }
+                    }
                 }
                 $aFallback[$sTypeLabel] = $bFallback;
             }
