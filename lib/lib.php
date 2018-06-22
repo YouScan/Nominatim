@@ -474,6 +474,7 @@ function getAddressDetails(&$oDB, $sLanguagePrefArraySQL, $iPlaceID, $sCountryCo
                         $sPossibleLabel = strtolower(isset($aPossibleLabel['simplelabel'])?$aPossibleLabel['simplelabel']:$aPossibleLabel['label']);
                         $sPossibleLabel = str_replace(' ', '_', $sPossibleLabel);
                         $aAddress['possible_'.$sPossibleLabel.'_osm_id'] = $aLine['node_osm_id'];
+                        $aAddress['possible_'.$sPossibleLabel.'_name'] = $aLine['localname'];
                     }
                 }
             }
